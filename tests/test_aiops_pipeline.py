@@ -42,6 +42,34 @@ def test_anomalous_record_is_detected():
     assert event["type"] == "ANOMALY"
 
 
+def test_error_log_is_flagged_as_anomaly():
+    detector = AnomalyDetector()
+
+    record = {
+        "timestamp": "2026-09-20T10:10:00",
+        "service": "invoice-service",
+        "response_time_ms": 210,
+        "cpu_percent": 65,
+        "memory_percent": 60,
+        "log_level": "ERROR",
+        "message": "Invoice processing failed"
+    }
+
+    event = detector.detect(record)
+
+    assert event is not None
+    assert "Error log detected" in event["reasons"]
+
+
+def test_run_pipeline_consumes_anomaly_events_from_shared_topic():
+    result = run_pipeline("data/service_data.json")
+
+    assert result["records_processed"] == 10
+    assert len(result["anomalies_detected"]) == 2
+    assert len(result["events_consumed"]) == 2
+    assert all(event["type"] == "ANOMALY" for event in result["events_consumed"])
+
+
 def test_producer_publishes_event():
     topic = EventTopic("anomaly-events")
     producer = EventProducer(topic)
@@ -70,3 +98,4 @@ def test_consumer_receives_event():
     messages = consumer.consume()
 
     assert len(messages) == 1
+    assert consumer.consume() == []

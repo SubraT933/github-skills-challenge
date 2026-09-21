@@ -8,4 +8,6 @@ class EventConsumer:
         self.topic = topic
 
     def consume(self):
-        return self.topic.get_messages()
+        messages = self.topic.get_messages()
+        self.topic.clear()
+        return messages
